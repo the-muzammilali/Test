@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Widget Demo with Firebase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, push, set, onValue, query, orderByChild } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBLSF8DwTAJIRTjJKXJu7RpEXDiX_hWNIA",
+            authDomain: "chatbot-79b32.firebaseapp.com",
+            databaseURL: "https://chatbot-79b32-default-rtdb.firebaseio.com",
+            projectId: "chatbot-79b32",
+            storageBucket: "chatbot-79b32.firebasestorage.app",
+            messagingSenderId: "336648069126",
+            appId: "1:336648069126:web:346105f0a3b0cf24b9e387",
+            measurementId: "G-RCG1V6KEBB"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // Make Firebase available globally
+        window.firebaseApp = app;
+        window.firebaseDatabase = database;
+        window.firebaseRef = ref;
+        window.firebasePush = push;
+        window.firebaseSet = set;
+        window.firebaseOnValue = onValue;
+        window.firebaseQuery = query;
+        window.firebaseOrderByChild = orderByChild;
+    </script>
+    <style>
+        @keyframes chatWidgetSlideInFromBottom {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .chat-widget-slide-in-bottom {
+            animation: chatWidgetSlideInFromBottom 0.3s ease-out;
+        }
+        .chat-widget-spin {
+            animation: chatWidgetSpin 1s linear infinite;
+        }
+        @keyframes chatWidgetSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Floating Chat Widget -->
+    <div id="custom-chat-widget-container" class="custom-chat-widget-container fixed bottom-4 right-4 z-50">
+        <!-- Chat Button -->
+        <button id="custom-chat-widget-button" class="custom-chat-widget-button bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-300">
+            <svg id="custom-chat-widget-button-icon" class="custom-chat-widget-button-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+        </button>
+
+        <!-- Chat Window -->
+        <div id="custom-chat-widget-window" class="custom-chat-widget-window hidden bg-white rounded-lg shadow-2xl w-80 sm:w-96 h-96 flex flex-col chat-widget-slide-in-bottom">
+            <!-- Header -->
+            <div id="custom-chat-widget-header" class="custom-chat-widget-header bg-blue-600 text-white p-4 rounded-t-lg flex justify-between items-center">
+                <h3 id="custom-chat-widget-title" class="custom-chat-widget-title font-semibold">Chat with us</h3>
+                <button id="custom-chat-widget-close-button" class="custom-chat-widget-close-button text-white hover:text-gray-200 transition-colors focus:outline-none">
+                    <svg id="custom-chat-widget-close-icon" class="custom-chat-widget-close-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Messages Area -->
+            <div id="custom-chat-widget-messages-area" class="custom-chat-widget-messages-area flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Messages will be loaded from Firebase -->
+            </div>
+
+            <!-- Input Area -->
+            <div id="custom-chat-widget-input-area" class="custom-chat-widget-input-area p-4 border-t border-gray-200">
+                <div id="custom-chat-widget-input-container" class="custom-chat-widget-input-container flex space-x-2">
+                    <input
+                        type="text"
+                        id="custom-chat-widget-message-input"
+                        class="custom-chat-widget-message-input flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Type your message..."
+                    />
+                    <button
+                        id="custom-chat-widget-send-button"
+                        class="custom-chat-widget-send-button bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <svg id="custom-chat-widget-send-icon" class="custom-chat-widget-send-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22,2 15,22 11,13 2,9"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chat Widget JavaScript with Firebase integration
+        window.CustomChatWidget = {
+            isOpen: false,
+            isLoading: false,
+            messages: [],
+            sessionInitialized: false,
+            unsubscribe: null,
+
+            // DOM elements
+            chatButton: null,
+            chatWindow: null,
+            closeButton: null,
+            messagesArea: null,
+            messageInput: null,
+            sendButton: null,
+
+            // Initialize
+            init: function() {
+                this.chatButton = document.getElementById('custom-chat-widget-button');
+                this.chatWindow = document.getElementById('custom-chat-widget-window');
+                this.closeButton = document.getElementById('custom-chat-widget-close-button');
+                this.messagesArea = document.getElementById('custom-chat-widget-messages-area');
+                this.messageInput = document.getElementById('custom-chat-widget-message-input');
+                this.sendButton = document.getElementById('custom-chat-widget-send-button');
+
+                // Event listeners
+                this.chatButton.addEventListener('click', () => this.openChat());
+                this.closeButton.addEventListener('click', () => this.closeChat());
+                this.sendButton.addEventListener('click', () => this.sendMessage());
+                this.messageInput.addEventListener('keypress', (e) => this.handleKeyPress(e));
+
+                // Initialize Firebase chat session
+                this.initializeChatSession();
+            },
+
+            openChat: function() {
+                this.isOpen = true;
+                this.chatButton.classList.add('hidden');
+                this.chatWindow.classList.remove('hidden');
+                this.messageInput.focus();
+            },
+
+            closeChat: function() {
+                this.isOpen = false;
+                this.chatButton.classList.remove('hidden');
+                this.chatWindow.classList.add('hidden');
+            },
+
+            handleKeyPress: function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendMessage();
+                }
+            },
+
+            getSessionId: function() {
+                let sessionId = localStorage.getItem('custom_chat_widget_session_id');
+                if (!sessionId) {
+                    sessionId = 'custom_session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem('custom_chat_widget_session_id', sessionId);
+                }
+                return sessionId;
+            },
+
+            // Initialize Firebase chat session
+            initializeChatSession: async function() {
+                if (this.sessionInitialized) return;
+
+                try {
+                    const sessionId = this.getSessionId();
+
+                    // Check if session exists, if not create it
+                    const existingSession = await this.getChatSession(sessionId);
+                    if (!existingSession) {
+                        await this.createChatSession(sessionId);
+                        // Add initial bot message
+                        await this.addMessageToFirebase(sessionId, {
+                            text: "Hello! How can I help you today?",
+                            isBot: true
+                        });
+                    }
+
+                    // Listen to messages in real-time
+                    this.listenToMessages(sessionId);
+                    this.sessionInitialized = true;
+                } catch (error) {
+                    console.error('Error initializing chat session:', error);
+                    // Fallback to local message if Firebase fails
+                    this.addMessageToUI("Hello! How can I help you today?", true);
+                    this.sessionInitialized = true;
+                }
+            },
+
+            // Create chat session in Firebase
+            createChatSession: async function(sessionId) {
+                const chatSessionRef = window.firebaseRef(window.firebaseDatabase, `chatSessions/${sessionId}`);
+                const sessionData = {
+                    sessionId,
+                    createdAt: Date.now(),
+                    lastActivity: Date.now(),
+                    status: 'active',
+                    userInfo: {
+                        userAgent: navigator.userAgent,
+                        timestamp: Date.now(),
+                        url: window.location.href
+                    },
+                    messages: {}
+                };
+
+                await window.firebaseSet(chatSessionRef, sessionData);
+                return sessionData;
+            },
+
+            // Add message to Firebase
+            addMessageToFirebase: async function(sessionId, messageData) {
+                const messagesRef = window.firebaseRef(window.firebaseDatabase, `chatSessions/${sessionId}/messages`);
+                const messageRef = window.firebasePush(messagesRef);
+
+                const message = {
+                    id: messageRef.key,
+                    text: messageData.text,
+                    isBot: messageData.isBot || false,
+                    timestamp: Date.now(),
+                    createdAt: new Date().toISOString()
+                };
+
+                await window.firebaseSet(messageRef, message);
+
+                // Update last activity
+                const lastActivityRef = window.firebaseRef(window.firebaseDatabase, `chatSessions/${sessionId}/lastActivity`);
+                await window.firebaseSet(lastActivityRef, Date.now());
+
+                return message;
+            },
+
+            // Get chat session from Firebase
+            getChatSession: function(sessionId) {
+                return new Promise((resolve, reject) => {
+                    const sessionRef = window.firebaseRef(window.firebaseDatabase, `chatSessions/${sessionId}`);
+                    window.firebaseOnValue(sessionRef, (snapshot) => {
+                        if (snapshot.exists()) {
+                            resolve(snapshot.val());
+                        } else {
+                            resolve(null);
+                        }
+                    }, reject);
+                });
+            },
+
+            // Listen to messages in real-time
+            listenToMessages: function(sessionId) {
+                const messagesRef = window.firebaseRef(window.firebaseDatabase, `chatSessions/${sessionId}/messages`);
+                const messagesQuery = window.firebaseQuery(messagesRef, window.firebaseOrderByChild('timestamp'));
+
+                window.firebaseOnValue(messagesQuery, (snapshot) => {
+                    this.messagesArea.innerHTML = ''; // Clear existing messages
+
+                    if (snapshot.exists()) {
+                        const messages = [];
+                        snapshot.forEach((childSnapshot) => {
+                            messages.push({
+                                id: childSnapshot.key,
+                                ...childSnapshot.val()
+                            });
+                        });
+
+                        // Display messages in UI
+                        messages.forEach(message => {
+                            this.addMessageToUI(message.text, message.isBot, false);
+                        });
+                    }
+                });
+            },
+
+            // Add message to UI
+            addMessageToUI: function(text, isBot = false, scroll = true) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `custom-chat-widget-message-container flex ${isBot ? 'justify-start' : 'justify-end'}`;
+
+                const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                messageDiv.innerHTML = `
+                    <div class="custom-chat-widget-message max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        isBot ? 'bg-gray-200 text-gray-800' : 'bg-green-100 text-green-800'
+                    }">
+                        <p class="custom-chat-widget-message-text text-sm">${text}</p>
+                        <p class="custom-chat-widget-message-time text-xs opacity-70 mt-1">${timestamp}</p>
+                    </div>
+                `;
+
+                this.messagesArea.appendChild(messageDiv);
+                if (scroll) {
+                    this.messagesArea.scrollTop = this.messagesArea.scrollHeight;
+                }
+            },
+
+            addMessage: function(text, isBot = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `custom-chat-widget-message-container flex ${isBot ? 'justify-start' : 'justify-end'}`;
+
+                const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                messageDiv.innerHTML = `
+                    <div class="custom-chat-widget-message max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        isBot ? 'bg-gray-200 text-gray-800' : 'bg-green-100 text-green-800'
+                    }">
+                        <p class="custom-chat-widget-message-text text-sm">${text}</p>
+                        <p class="custom-chat-widget-message-time text-xs opacity-70 mt-1">${timestamp}</p>
+                    </div>
+                `;
+
+                this.messagesArea.appendChild(messageDiv);
+                this.messagesArea.scrollTop = this.messagesArea.scrollHeight;
+            },
+
+            showLoading: function() {
+                const loadingDiv = document.createElement('div');
+                loadingDiv.id = 'custom-chat-widget-loading-message';
+                loadingDiv.className = 'custom-chat-widget-loading-container flex justify-start';
+                loadingDiv.innerHTML = `
+                    <div class="custom-chat-widget-loading-message bg-gray-200 text-gray-800 px-4 py-2 rounded-lg flex items-center space-x-2">
+                        <div class="custom-chat-widget-loading-spinner w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full chat-widget-spin"></div>
+                        <span class="custom-chat-widget-loading-text text-sm">Typing...</span>
+                    </div>
+                `;
+                this.messagesArea.appendChild(loadingDiv);
+                this.messagesArea.scrollTop = this.messagesArea.scrollHeight;
+            },
+
+            hideLoading: function() {
+                const loadingMessage = document.getElementById('custom-chat-widget-loading-message');
+                if (loadingMessage) {
+                    loadingMessage.remove();
+                }
+            },
+
+            sendMessage: async function() {
+                const message = this.messageInput.value.trim();
+                if (!message || this.isLoading || !this.sessionInitialized) return;
+
+                this.messageInput.value = '';
+                this.isLoading = true;
+                this.sendButton.disabled = true;
+                this.messageInput.disabled = true;
+
+                // Show loading
+                this.showLoading();
+
+                try {
+                    const sessionId = this.getSessionId();
+
+                    // Save user message to Firebase
+                    await this.addMessageToFirebase(sessionId, {
+                        text: message,
+                        isBot: false
+                    });
+
+                    // Send to webhook API
+                    const params = new URLSearchParams({
+                        sessionId: sessionId,
+                        action: 'sendMessage',
+                        chatInput: message
+                    });
+
+                    const response = await fetch(`https://automationsystem.aistudio.itpyx.pk/webhook/9ed9aca2-e181-4d2a-8e97-d027755bd763?${params}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    // Hide loading
+                    this.hideLoading();
+
+                    // Save bot response to Firebase
+                    await this.addMessageToFirebase(sessionId, {
+                        text: data.reply || 'Sorry, I encountered an error. Please try again.',
+                        isBot: true
+                    });
+
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    this.hideLoading();
+
+                    // Save error message to Firebase
+                    try {
+                        const sessionId = this.getSessionId();
+                        await this.addMessageToFirebase(sessionId, {
+                            text: 'Sorry, I encountered an error. Please try again.',
+                            isBot: true
+                        });
+                    } catch (firebaseError) {
+                        console.error('Error saving error message to Firebase:', firebaseError);
+                        // Fallback to UI only
+                        this.addMessageToUI('Sorry, I encountered an error. Please try again.', true);
+                    }
+                } finally {
+                    this.isLoading = false;
+                    this.sendButton.disabled = false;
+                    this.messageInput.disabled = false;
+                    this.messageInput.focus();
+                }
+            }
+        };
+
+        // Initialize the chat widget when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wait for Firebase to be available
+            const checkFirebase = setInterval(() => {
+                if (window.firebaseDatabase) {
+                    clearInterval(checkFirebase);
+                    window.CustomChatWidget.init();
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>

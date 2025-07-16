@@ -1,0 +1,101 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    
+    "chatSessions": {
+      ".read": "auth != null && auth.token.admin == true",
+      ".write": "auth != null && auth.token.admin == true",
+      
+      "$sessionId": {
+        ".validate": "newData.hasChildren(['sessionId', 'createdAt', 'status'])",
+        
+        "sessionId": {
+          ".validate": "newData.isString() && newData.val().length > 10"
+        },
+        
+        "createdAt": {
+          ".validate": "newData.isNumber()"
+        },
+        
+        "lastActivity": {
+          ".validate": "newData.isNumber()"
+        },
+        
+        "status": {
+          ".validate": "newData.isString() && (newData.val() == 'active' || newData.val() == 'closed' || newData.val() == 'pending')"
+        },
+        
+        "adminReplied": {
+          ".validate": "newData.isBoolean()"
+        },
+        
+        "userInfo": {
+          ".validate": "newData.hasChildren()",
+          "$field": {
+            ".validate": "true"
+          }
+        },
+        
+        "messages": {
+          "$messageId": {
+            ".validate": "newData.hasChildren(['id', 'text', 'isBot', 'timestamp'])",
+            
+            "id": {
+              ".validate": "newData.isString()"
+            },
+            
+            "text": {
+              ".validate": "newData.isString() && newData.val().length <= 1000"
+            },
+            
+            "isBot": {
+              ".validate": "newData.isBoolean()"
+            },
+            
+            "isAdmin": {
+              ".validate": "newData.isBoolean()"
+            },
+            
+            "adminId": {
+              ".validate": "newData.isString() || newData.val() == null"
+            },
+            
+            "timestamp": {
+              ".validate": "newData.isNumber()"
+            },
+            
+            "createdAt": {
+              ".validate": "newData.isString()"
+            }
+          }
+        }
+      }
+    },
+    
+    "adminUsers": {
+      ".read": "auth != null && auth.token.admin == true",
+      ".write": "auth != null && auth.token.admin == true",
+      
+      "$userId": {
+        ".validate": "newData.hasChildren(['email', 'role'])",
+        
+        "email": {
+          ".validate": "newData.isString()"
+        },
+        
+        "role": {
+          ".validate": "newData.val() == 'admin'"
+        },
+        
+        "createdAt": {
+          ".validate": "newData.isNumber()"
+        },
+        
+        "lastLogin": {
+          ".validate": "newData.isNumber()"
+        }
+      }
+    }
+  }
+}

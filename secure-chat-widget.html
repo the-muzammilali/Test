@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Chat Widget</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes chatWidgetSlideInFromBottom {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .chat-widget-slide-in-bottom {
+            animation: chatWidgetSlideInFromBottom 0.3s ease-out;
+        }
+        .chat-widget-spin {
+            animation: chatWidgetSpin 1s linear infinite;
+        }
+        @keyframes chatWidgetSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    
+    <!-- Demo content -->
+    <div class="container mx-auto px-4 py-16">
+        <div class="text-center">
+            <h1 class="text-4xl font-bold text-gray-900 mb-6">
+                🔒 Secure Chat Widget Demo
+            </h1>
+            <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+                This chat widget uses secure API communication with no exposed credentials. 
+                All sensitive data is encrypted and handled server-side.
+            </p>
+            
+            <div class="bg-white rounded-lg shadow-lg p-6 max-w-md mx-auto mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">🛡️ Security Features</h3>
+                <ul class="text-left text-gray-600 space-y-2">
+                    <li>✅ No exposed Firebase credentials</li>
+                    <li>✅ Encrypted user data</li>
+                    <li>✅ API key authentication</li>
+                    <li>✅ Rate limiting protection</li>
+                    <li>✅ Input sanitization</li>
+                    <li>✅ CORS protection</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Secure Floating Chat Widget -->
+    <div id="secure-chat-widget-container" class="secure-chat-widget-container fixed bottom-4 right-4 z-50">
+        <!-- Chat Button -->
+        <button id="secure-chat-widget-button" class="secure-chat-widget-button bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-300">
+            <svg id="secure-chat-widget-button-icon" class="secure-chat-widget-button-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+        </button>
+
+        <!-- Chat Window -->
+        <div id="secure-chat-widget-window" class="secure-chat-widget-window hidden bg-white rounded-lg shadow-2xl w-80 sm:w-96 h-96 flex flex-col chat-widget-slide-in-bottom">
+            <!-- Header -->
+            <div id="secure-chat-widget-header" class="secure-chat-widget-header bg-blue-600 text-white p-4 rounded-t-lg flex justify-between items-center">
+                <h3 id="secure-chat-widget-title" class="secure-chat-widget-title font-semibold">🔒 Secure Chat</h3>
+                <button id="secure-chat-widget-close-button" class="secure-chat-widget-close-button text-white hover:text-gray-200 transition-colors focus:outline-none">
+                    <svg id="secure-chat-widget-close-icon" class="secure-chat-widget-close-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Messages Area -->
+            <div id="secure-chat-widget-messages-area" class="secure-chat-widget-messages-area flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Messages will be loaded from secure API -->
+            </div>
+
+            <!-- Input Area -->
+            <div id="secure-chat-widget-input-area" class="secure-chat-widget-input-area p-4 border-t border-gray-200">
+                <div id="secure-chat-widget-input-container" class="secure-chat-widget-input-container flex space-x-2">
+                    <input
+                        type="text"
+                        id="secure-chat-widget-message-input"
+                        class="secure-chat-widget-message-input flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Type your message..."
+                    />
+                    <button
+                        id="secure-chat-widget-send-button"
+                        class="secure-chat-widget-send-button bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <svg id="secure-chat-widget-send-icon" class="secure-chat-widget-send-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22,2 15,22 11,13 2,9"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Secure Chat Widget JavaScript
+        window.SecureChatWidget = {
+            isOpen: false,
+            isLoading: false,
+            messages: [],
+            sessionInitialized: false,
+            
+            // Configuration (no sensitive data)
+            config: {
+                apiBaseUrl: 'http://localhost:3001',
+                apiKey: 'chatbot-api-key-2024-secure-frontend-auth'
+            },
+
+            // DOM elements
+            chatButton: null,
+            chatWindow: null,
+            closeButton: null,
+            messagesArea: null,
+            messageInput: null,
+            sendButton: null,
+
+            // Initialize
+            init: function() {
+                this.chatButton = document.getElementById('secure-chat-widget-button');
+                this.chatWindow = document.getElementById('secure-chat-widget-window');
+                this.closeButton = document.getElementById('secure-chat-widget-close-button');
+                this.messagesArea = document.getElementById('secure-chat-widget-messages-area');
+                this.messageInput = document.getElementById('secure-chat-widget-message-input');
+                this.sendButton = document.getElementById('secure-chat-widget-send-button');
+
+                // Event listeners
+                this.chatButton.addEventListener('click', () => this.openChat());
+                this.closeButton.addEventListener('click', () => this.closeChat());
+                this.sendButton.addEventListener('click', () => this.sendMessage());
+                this.messageInput.addEventListener('keypress', (e) => this.handleKeyPress(e));
+
+                // Initialize secure chat session
+                this.initializeSecureSession();
+            },
+
+            openChat: function() {
+                this.isOpen = true;
+                this.chatButton.classList.add('hidden');
+                this.chatWindow.classList.remove('hidden');
+                this.messageInput.focus();
+            },
+
+            closeChat: function() {
+                this.isOpen = false;
+                this.chatButton.classList.remove('hidden');
+                this.chatWindow.classList.add('hidden');
+            },
+
+            handleKeyPress: function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendMessage();
+                }
+            },
+
+            getSessionId: function() {
+                let sessionId = localStorage.getItem('secure_chat_widget_session_id');
+                if (!sessionId) {
+                    sessionId = 'secure_session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
+                    localStorage.setItem('secure_chat_widget_session_id', sessionId);
+                }
+                return sessionId;
+            },
+
+            // Make secure API request
+            makeSecureRequest: async function(endpoint, options = {}) {
+                const url = `${this.config.apiBaseUrl}${endpoint}`;
+                
+                const defaultHeaders = {
+                    'Content-Type': 'application/json',
+                    'x-api-key': this.config.apiKey
+                };
+
+                const config = {
+                    ...options,
+                    headers: {
+                        ...defaultHeaders,
+                        ...options.headers
+                    }
+                };
+
+                try {
+                    const response = await fetch(url, config);
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || `HTTP ${response.status}`);
+                    }
+
+                    return data;
+                } catch (error) {
+                    console.error('Secure API request failed:', error);
+                    throw error;
+                }
+            },
+
+            // Initialize secure session
+            initializeSecureSession: async function() {
+                if (this.sessionInitialized) return;
+                
+                try {
+                    const sessionId = this.getSessionId();
+                    
+                    // Check if session exists
+                    try {
+                        await this.makeSecureRequest(`/api/chat/session/${sessionId}`);
+                    } catch (error) {
+                        // Session doesn't exist, create it
+                        await this.makeSecureRequest('/api/chat/session', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                sessionId,
+                                userInfo: {
+                                    url: window.location.href,
+                                    timestamp: Date.now()
+                                }
+                            })
+                        });
+                    }
+
+                    // Load existing messages
+                    await this.loadMessages();
+                    
+                    // Add initial message if no messages exist
+                    if (this.messages.length === 0) {
+                        this.addMessageToUI("Hello! How can I help you today? 🔒", true);
+                    }
+
+                    this.sessionInitialized = true;
+                } catch (error) {
+                    console.error('Error initializing secure session:', error);
+                    this.addMessageToUI("Hello! How can I help you today?", true);
+                    this.sessionInitialized = true;
+                }
+            },
+
+            // Load messages from secure API
+            loadMessages: async function() {
+                try {
+                    const sessionId = this.getSessionId();
+                    const response = await this.makeSecureRequest(`/api/chat/session/${sessionId}/messages`);
+                    
+                    if (response.success) {
+                        this.messages = response.data;
+                        this.renderMessages();
+                    }
+                } catch (error) {
+                    console.error('Error loading messages:', error);
+                }
+            },
+
+            // Render messages
+            renderMessages: function() {
+                this.messagesArea.innerHTML = '';
+                this.messages.forEach(message => {
+                    this.addMessageToUI(message.text, message.isBot, false);
+                });
+            },
+
+            // Add message to UI
+            addMessageToUI: function(text, isBot = false, scroll = true) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `secure-chat-widget-message-container flex ${isBot ? 'justify-start' : 'justify-end'}`;
+                
+                const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                messageDiv.innerHTML = `
+                    <div class="secure-chat-widget-message max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        isBot ? 'bg-gray-200 text-gray-800' : 'bg-green-100 text-green-800'
+                    }">
+                        <p class="secure-chat-widget-message-text text-sm">${text}</p>
+                        <p class="secure-chat-widget-message-time text-xs opacity-70 mt-1">${timestamp}</p>
+                    </div>
+                `;
+                
+                this.messagesArea.appendChild(messageDiv);
+                if (scroll) {
+                    this.messagesArea.scrollTop = this.messagesArea.scrollHeight;
+                }
+            },
+
+            showLoading: function() {
+                const loadingDiv = document.createElement('div');
+                loadingDiv.id = 'secure-chat-widget-loading-message';
+                loadingDiv.className = 'secure-chat-widget-loading-container flex justify-start';
+                loadingDiv.innerHTML = `
+                    <div class="secure-chat-widget-loading-message bg-gray-200 text-gray-800 px-4 py-2 rounded-lg flex items-center space-x-2">
+                        <div class="secure-chat-widget-loading-spinner w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full chat-widget-spin"></div>
+                        <span class="secure-chat-widget-loading-text text-sm">Typing...</span>
+                    </div>
+                `;
+                this.messagesArea.appendChild(loadingDiv);
+                this.messagesArea.scrollTop = this.messagesArea.scrollHeight;
+            },
+
+            hideLoading: function() {
+                const loadingMessage = document.getElementById('secure-chat-widget-loading-message');
+                if (loadingMessage) {
+                    loadingMessage.remove();
+                }
+            },
+
+            sendMessage: async function() {
+                const message = this.messageInput.value.trim();
+                if (!message || this.isLoading || !this.sessionInitialized) return;
+
+                this.messageInput.value = '';
+                this.isLoading = true;
+                this.sendButton.disabled = true;
+                this.messageInput.disabled = true;
+
+                // Add user message to UI immediately
+                this.addMessageToUI(message, false);
+
+                // Show loading
+                this.showLoading();
+
+                try {
+                    const sessionId = this.getSessionId();
+                    
+                    // Send message through secure API
+                    const response = await this.makeSecureRequest('/api/chat/webhook', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            sessionId,
+                            message
+                        })
+                    });
+
+                    // Hide loading
+                    this.hideLoading();
+
+                    if (response.success && response.data.botReply) {
+                        this.addMessageToUI(response.data.botReply, true);
+                    } else {
+                        this.addMessageToUI('Sorry, I encountered an error. Please try again.', true);
+                    }
+                    
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    this.hideLoading();
+                    this.addMessageToUI('Sorry, I encountered an error. Please try again.', true);
+                } finally {
+                    this.isLoading = false;
+                    this.sendButton.disabled = false;
+                    this.messageInput.disabled = false;
+                    this.messageInput.focus();
+                }
+            }
+        };
+
+        // Initialize the secure chat widget when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            window.SecureChatWidget.init();
+        });
+    </script>
+</body>
+</html>

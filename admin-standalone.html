@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Admin CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, onValue, query, orderByChild, push, set } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBLSF8DwTAJIRTjJKXJu7RpEXDiX_hWNIA",
+            authDomain: "chatbot-79b32.firebaseapp.com",
+            databaseURL: "https://chatbot-79b32-default-rtdb.firebaseio.com",
+            projectId: "chatbot-79b32",
+            storageBucket: "chatbot-79b32.firebasestorage.app",
+            messagingSenderId: "336648069126",
+            appId: "1:336648069126:web:346105f0a3b0cf24b9e387",
+            measurementId: "G-RCG1V6KEBB"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const auth = getAuth(app);
+
+        // Make Firebase available globally
+        window.firebaseApp = app;
+        window.firebaseDatabase = database;
+        window.firebaseAuth = auth;
+        window.firebaseRef = ref;
+        window.firebaseOnValue = onValue;
+        window.firebaseQuery = query;
+        window.firebaseOrderByChild = orderByChild;
+        window.firebasePush = push;
+        window.firebaseSet = set;
+        window.firebaseSignInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.firebaseSignOut = signOut;
+        window.firebaseOnAuthStateChanged = onAuthStateChanged;
+    </script>
+    <style>
+        .chat-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e0 #f7fafc;
+        }
+        .chat-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-scroll::-webkit-scrollbar-track {
+            background: #f7fafc;
+        }
+        .chat-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 3px;
+        }
+        .chat-scroll::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Login Screen -->
+    <div id="login-screen" class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-8">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="bg-blue-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <svg class="text-white" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <circle cx="12" cy="16" r="1"></circle>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">Admin Login</h1>
+                <p class="text-gray-600">Access the Chat Management System</p>
+            </div>
+
+            <!-- Error Message -->
+            <div id="error-message" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center">
+                <svg class="text-red-500 mr-3" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                <span class="text-red-700 text-sm" id="error-text">Invalid email or password. Please try again.</span>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="space-y-6">
+                <!-- Email Field -->
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                <polyline points="22,6 12,13 2,6"></polyline>
+                            </svg>
+                        </div>
+                        <input
+                            id="email"
+                            type="email"
+                            value="test@gmail.com"
+                            class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter your email"
+                            required
+                        />
+                    </div>
+                </div>
+
+                <!-- Password Field -->
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <circle cx="12" cy="16" r="1"></circle>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                        </div>
+                        <input
+                            id="password"
+                            type="password"
+                            value="Test@123"
+                            class="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter your password"
+                            required
+                        />
+                        <button
+                            type="button"
+                            id="toggle-password"
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center"
+                        >
+                            <svg id="eye-closed" class="h-5 w-5 text-gray-400 hover:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
+                            <svg id="eye-open" class="hidden h-5 w-5 text-gray-400 hover:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button
+                    type="submit"
+                    id="login-button"
+                    class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                    <span id="login-text">Sign In</span>
+                    <div id="login-loading" class="hidden flex items-center justify-center">
+                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Signing in...
+                    </div>
+                </button>
+            </form>
+
+            <!-- Test Credentials Info -->
+            <div class="mt-8 p-4 bg-gray-50 rounded-lg">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Test Credentials:</h3>
+                <p class="text-sm text-gray-600">Email: test@gmail.com</p>
+                <p class="text-sm text-gray-600">Password: Test@123</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CRM Dashboard -->
+    <div id="crm-dashboard" class="hidden h-screen bg-gray-100 flex">
+        <!-- Sidebar - Chat Sessions List -->
+        <div class="w-1/3 bg-white border-r border-gray-200 flex flex-col">
+            <!-- Header -->
+            <div class="p-4 border-b border-gray-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h1 class="text-xl font-bold text-gray-900">Chat CRM</h1>
+                    <button
+                        id="logout-button"
+                        class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Logout"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16,17 21,12 16,7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Search and Filter -->
+                <div class="space-y-3">
+                    <div class="relative">
+                        <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="M21 21l-4.35-4.35"></path>
+                        </svg>
+                        <input
+                            type="text"
+                            id="search-input"
+                            placeholder="Search sessions..."
+                            class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+
+                    <div class="flex space-x-2">
+                        <select
+                            id="status-filter"
+                            class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="all">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="closed">Closed</option>
+                            <option value="pending">Pending</option>
+                        </select>
+
+                        <button
+                            id="refresh-button"
+                            class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Refresh"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="23,4 23,10 17,10"></polyline>
+                                <polyline points="1,20 1,14 7,14"></polyline>
+                                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="mt-4 grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-blue-50 rounded-lg p-2">
+                        <div id="total-count" class="text-blue-600 font-semibold text-sm">0</div>
+                        <div class="text-blue-500 text-xs">Total</div>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-2">
+                        <div id="active-count" class="text-green-600 font-semibold text-sm">0</div>
+                        <div class="text-green-500 text-xs">Active</div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-2">
+                        <div id="closed-count" class="text-gray-600 font-semibold text-sm">0</div>
+                        <div class="text-gray-500 text-xs">Closed</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sessions List -->
+            <div id="sessions-list" class="flex-1 overflow-y-auto chat-scroll">
+                <div id="sessions-loading" class="flex items-center justify-center h-32">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+                <div id="sessions-empty" class="hidden text-center text-gray-500 mt-8">
+                    <svg width="48" height="48" class="mx-auto mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <p>No chat sessions found</p>
+                </div>
+                <div id="sessions-container"></div>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="flex-1 flex flex-col">
+            <!-- No Session Selected -->
+            <div id="no-session-selected" class="flex-1 flex items-center justify-center bg-gray-50">
+                <div class="text-center">
+                    <svg width="64" height="64" class="mx-auto mb-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Select a Chat Session</h3>
+                    <p class="text-gray-500">Choose a conversation from the sidebar to start managing</p>
+                </div>
+            </div>
+
+            <!-- Chat Session View -->
+            <div id="chat-session-view" class="hidden flex-1 flex flex-col">
+                <!-- Chat Header -->
+                <div class="bg-white border-b border-gray-200 p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 id="session-title" class="text-lg font-semibold text-gray-900">Chat Session</h2>
+                            <div id="session-info" class="flex items-center text-sm text-gray-500 mt-1">
+                                <svg width="14" height="14" class="mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                <span id="session-created">Started: --</span>
+                                <svg width="14" height="14" class="ml-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12,6 12,12 16,14"></polyline>
+                                </svg>
+                                <span id="session-url">Unknown URL</span>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button
+                                id="close-session-button"
+                                class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition-colors"
+                            >
+                                Close Chat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages Area -->
+                <div id="messages-area" class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 chat-scroll">
+                    <!-- Messages will be loaded here -->
+                </div>
+
+                <!-- Message Input -->
+                <div class="bg-white border-t border-gray-200 p-4">
+                    <div class="flex space-x-3">
+                        <input
+                            type="text"
+                            id="admin-message-input"
+                            placeholder="Type your reply..."
+                            class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <button
+                            id="send-admin-message"
+                            class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <svg id="send-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22,2 15,22 11,13 2,9"></polygon>
+                            </svg>
+                            <div id="send-loading" class="hidden animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Admin CRM JavaScript
+        window.AdminCRM = {
+            currentUser: null,
+            chatSessions: [],
+            selectedSession: null,
+            messages: [],
+            unsubscribes: [],
+
+            // Initialize
+            init: function() {
+                this.setupEventListeners();
+                this.checkAuthState();
+            },
+
+            // Setup event listeners
+            setupEventListeners: function() {
+                // Login form
+                document.getElementById('login-form').addEventListener('submit', (e) => this.handleLogin(e));
+                document.getElementById('toggle-password').addEventListener('click', () => this.togglePassword());
+
+                // Logout
+                document.getElementById('logout-button').addEventListener('click', () => this.handleLogout());
+
+                // Search and filter
+                document.getElementById('search-input').addEventListener('input', (e) => this.filterSessions());
+                document.getElementById('status-filter').addEventListener('change', (e) => this.filterSessions());
+                document.getElementById('refresh-button').addEventListener('click', () => this.loadSessions());
+
+                // Message input
+                document.getElementById('admin-message-input').addEventListener('keypress', (e) => this.handleKeyPress(e));
+                document.getElementById('send-admin-message').addEventListener('click', () => this.sendAdminMessage());
+
+                // Close session
+                document.getElementById('close-session-button').addEventListener('click', () => this.closeSession());
+            },
+
+            // Check authentication state
+            checkAuthState: function() {
+                window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
+                    if (user) {
+                        this.currentUser = user;
+                        this.showDashboard();
+                        this.loadSessions();
+                    } else {
+                        this.currentUser = null;
+                        this.showLogin();
+                    }
+                });
+            },
+
+            // Handle login
+            handleLogin: async function(e) {
+                e.preventDefault();
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+
+                this.setLoading(true);
+                this.hideError();
+
+                try {
+                    await window.firebaseSignInWithEmailAndPassword(window.firebaseAuth, email, password);
+                } catch (error) {
+                    this.showError('Invalid email or password. Please try again.');
+                    console.error('Login error:', error);
+                } finally {
+                    this.setLoading(false);
+                }
+            },
+
+            // Handle logout
+            handleLogout: async function() {
+                try {
+                    // Clean up listeners
+                    this.unsubscribes.forEach(unsubscribe => unsubscribe());
+                    this.unsubscribes = [];
+
+                    await window.firebaseSignOut(window.firebaseAuth);
+                } catch (error) {
+                    console.error('Logout error:', error);
+                }
+            },
+
+            // Toggle password visibility
+            togglePassword: function() {
+                const passwordInput = document.getElementById('password');
+                const eyeClosed = document.getElementById('eye-closed');
+                const eyeOpen = document.getElementById('eye-open');
+
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    eyeClosed.classList.add('hidden');
+                    eyeOpen.classList.remove('hidden');
+                } else {
+                    passwordInput.type = 'password';
+                    eyeClosed.classList.remove('hidden');
+                    eyeOpen.classList.add('hidden');
+                }
+            },
+
+            // Show/hide screens
+            showLogin: function() {
+                document.getElementById('login-screen').classList.remove('hidden');
+                document.getElementById('crm-dashboard').classList.add('hidden');
+            },
+
+            showDashboard: function() {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('crm-dashboard').classList.remove('hidden');
+            },
+
+            // Loading and error states
+            setLoading: function(loading) {
+                const button = document.getElementById('login-button');
+                const text = document.getElementById('login-text');
+                const loadingDiv = document.getElementById('login-loading');
+
+                if (loading) {
+                    button.disabled = true;
+                    text.classList.add('hidden');
+                    loadingDiv.classList.remove('hidden');
+                } else {
+                    button.disabled = false;
+                    text.classList.remove('hidden');
+                    loadingDiv.classList.add('hidden');
+                }
+            },
+
+            showError: function(message) {
+                const errorDiv = document.getElementById('error-message');
+                const errorText = document.getElementById('error-text');
+                errorText.textContent = message;
+                errorDiv.classList.remove('hidden');
+            },
+
+            hideError: function() {
+                document.getElementById('error-message').classList.add('hidden');
+            },
+
+            // Load chat sessions
+            loadSessions: function() {
+                const sessionsRef = window.firebaseRef(window.firebaseDatabase, 'chatSessions');
+                const sessionsQuery = window.firebaseQuery(sessionsRef, window.firebaseOrderByChild('lastActivity'));
+
+                // Clean up previous listener
+                this.unsubscribes.forEach(unsubscribe => unsubscribe());
+                this.unsubscribes = [];
+
+                const unsubscribe = window.firebaseOnValue(sessionsQuery, (snapshot) => {
+                    const sessions = [];
+                    if (snapshot.exists()) {
+                        snapshot.forEach((childSnapshot) => {
+                            sessions.push({
+                                sessionId: childSnapshot.key,
+                                ...childSnapshot.val()
+                            });
+                        });
+                    }
+
+                    // Sort by last activity (most recent first)
+                    sessions.sort((a, b) => b.lastActivity - a.lastActivity);
+                    this.chatSessions = sessions;
+                    this.renderSessions();
+                    this.updateStats();
+                });
+
+                this.unsubscribes.push(() => unsubscribe);
+            },
+
+            // Render sessions list
+            renderSessions: function() {
+                const container = document.getElementById('sessions-container');
+                const loading = document.getElementById('sessions-loading');
+                const empty = document.getElementById('sessions-empty');
+
+                loading.classList.add('hidden');
+
+                if (this.chatSessions.length === 0) {
+                    empty.classList.remove('hidden');
+                    container.innerHTML = '';
+                    return;
+                }
+
+                empty.classList.add('hidden');
+
+                const filteredSessions = this.getFilteredSessions();
+
+                container.innerHTML = filteredSessions.map(session => `
+                    <div class="session-item p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                        this.selectedSession?.sessionId === session.sessionId ? 'bg-blue-50 border-blue-200' : ''
+                    }" data-session-id="${session.sessionId}">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="flex items-center">
+                                <div class="bg-blue-100 rounded-full p-2 mr-3">
+                                    <svg width="16" height="16" class="text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="12" cy="7" r="4"></circle>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-sm text-gray-900">
+                                        Session ${session.sessionId.split('_')[2]?.substring(0, 6) || 'Unknown'}
+                                    </div>
+                                    <div class="text-xs text-gray-500 flex items-center">
+                                        <svg width="12" height="12" class="mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polyline points="12,6 12,12 16,14"></polyline>
+                                        </svg>
+                                        ${this.formatTime(session.lastActivity)}
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${
+                                session.status === 'active' ? 'bg-green-100 text-green-800' :
+                                session.status === 'closed' ? 'bg-gray-100 text-gray-800' :
+                                'bg-yellow-100 text-yellow-800'
+                            }">
+                                ${session.status}
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-600 truncate">
+                            ${this.getSessionPreview(session)}
+                        </p>
+                    </div>
+                `).join('');
+
+                // Add click listeners
+                container.querySelectorAll('.session-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const sessionId = item.dataset.sessionId;
+                        const session = this.chatSessions.find(s => s.sessionId === sessionId);
+                        this.selectSession(session);
+                    });
+                });
+            },
+
+            // Get filtered sessions
+            getFilteredSessions: function() {
+                const searchTerm = document.getElementById('search-input').value.toLowerCase();
+                const statusFilter = document.getElementById('status-filter').value;
+
+                return this.chatSessions.filter(session => {
+                    const matchesSearch = session.sessionId.toLowerCase().includes(searchTerm) ||
+                                         (session.userInfo?.userAgent || '').toLowerCase().includes(searchTerm);
+                    const matchesStatus = statusFilter === 'all' || session.status === statusFilter;
+                    return matchesSearch && matchesStatus;
+                });
+            },
+
+            // Filter sessions
+            filterSessions: function() {
+                this.renderSessions();
+            },
+
+            // Update statistics
+            updateStats: function() {
+                const total = this.chatSessions.length;
+                const active = this.chatSessions.filter(s => s.status === 'active').length;
+                const closed = this.chatSessions.filter(s => s.status === 'closed').length;
+
+                document.getElementById('total-count').textContent = total;
+                document.getElementById('active-count').textContent = active;
+                document.getElementById('closed-count').textContent = closed;
+            },
+
+            // Select a session
+            selectSession: function(session) {
+                this.selectedSession = session;
+                this.renderSessions(); // Re-render to show selection
+                this.loadMessages(session.sessionId);
+                this.showChatView(session);
+            },
+
+            // Show chat view
+            showChatView: function(session) {
+                document.getElementById('no-session-selected').classList.add('hidden');
+                document.getElementById('chat-session-view').classList.remove('hidden');
+
+                // Update header
+                document.getElementById('session-title').textContent =
+                    `Chat Session: ${session.sessionId.split('_')[2]?.substring(0, 8) || 'Unknown'}`;
+                document.getElementById('session-created').textContent =
+                    `Started: ${this.formatTime(session.createdAt)}`;
+                document.getElementById('session-url').textContent =
+                    session.userInfo?.url || 'Unknown URL';
+            },
+
+            // Load messages for session
+            loadMessages: function(sessionId) {
+                const messagesRef = window.firebaseRef(window.firebaseDatabase, `chatSessions/${sessionId}/messages`);
+                const messagesQuery = window.firebaseQuery(messagesRef, window.firebaseOrderByChild('timestamp'));
+
+                window.firebaseOnValue(messagesQuery, (snapshot) => {
+                    const messages = [];
+                    if (snapshot.exists()) {
+                        snapshot.forEach((childSnapshot) => {
+                            messages.push({
+                                id: childSnapshot.key,
+                                ...childSnapshot.val()
+                            });
+                        });
+                    }
+                    this.messages = messages;
+                    this.renderMessages();
+                });
+            },
+
+            // Render messages
+            renderMessages: function() {
+                const container = document.getElementById('messages-area');
+
+                container.innerHTML = this.messages.map(message => `
+                    <div class="flex ${message.isBot ? 'justify-start' : 'justify-end'}">
+                        <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                            message.isBot
+                                ? 'bg-white text-gray-800 shadow-sm'
+                                : 'bg-blue-600 text-white'
+                        }">
+                            <p class="text-sm">${message.text}</p>
+                            <p class="text-xs mt-1 ${
+                                message.isBot ? 'text-gray-500' : 'text-blue-100'
+                            }">
+                                ${this.formatMessageTime(message.timestamp)}
+                                ${message.isAdmin ? ' (Admin)' : ''}
+                            </p>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Scroll to bottom
+                container.scrollTop = container.scrollHeight;
+            },
+
+            // Send admin message
+            sendAdminMessage: async function() {
+                const input = document.getElementById('admin-message-input');
+                const message = input.value.trim();
+
+                if (!message || !this.selectedSession) return;
+
+                const sendButton = document.getElementById('send-admin-message');
+                const sendIcon = document.getElementById('send-icon');
+                const sendLoading = document.getElementById('send-loading');
+
+                // Show loading
+                sendButton.disabled = true;
+                sendIcon.classList.add('hidden');
+                sendLoading.classList.remove('hidden');
+
+                try {
+                    const messagesRef = window.firebaseRef(window.firebaseDatabase, `chatSessions/${this.selectedSession.sessionId}/messages`);
+                    const messageRef = window.firebasePush(messagesRef);
+
+                    const messageData = {
+                        id: messageRef.key,
+                        text: message,
+                        isBot: true,
+                        isAdmin: true,
+                        adminId: this.currentUser.email,
+                        timestamp: Date.now(),
+                        createdAt: new Date().toISOString()
+                    };
+
+                    await window.firebaseSet(messageRef, messageData);
+
+                    // Update last activity
+                    const lastActivityRef = window.firebaseRef(window.firebaseDatabase, `chatSessions/${this.selectedSession.sessionId}/lastActivity`);
+                    await window.firebaseSet(lastActivityRef, Date.now());
+
+                    // Mark admin replied
+                    const adminRepliedRef = window.firebaseRef(window.firebaseDatabase, `chatSessions/${this.selectedSession.sessionId}/adminReplied`);
+                    await window.firebaseSet(adminRepliedRef, true);
+
+                    input.value = '';
+                } catch (error) {
+                    console.error('Error sending admin message:', error);
+                } finally {
+                    sendButton.disabled = false;
+                    sendIcon.classList.remove('hidden');
+                    sendLoading.classList.add('hidden');
+                    input.focus();
+                }
+            },
+
+            // Handle key press in message input
+            handleKeyPress: function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendAdminMessage();
+                }
+            },
+
+            // Close session
+            closeSession: async function() {
+                if (!this.selectedSession) return;
+
+                try {
+                    const statusRef = window.firebaseRef(window.firebaseDatabase, `chatSessions/${this.selectedSession.sessionId}/status`);
+                    await window.firebaseSet(statusRef, 'closed');
+
+                    const lastActivityRef = window.firebaseRef(window.firebaseDatabase, `chatSessions/${this.selectedSession.sessionId}/lastActivity`);
+                    await window.firebaseSet(lastActivityRef, Date.now());
+                } catch (error) {
+                    console.error('Error closing session:', error);
+                }
+            },
+
+            // Utility functions
+            formatTime: function(timestamp) {
+                return new Date(timestamp).toLocaleString();
+            },
+
+            formatMessageTime: function(timestamp) {
+                return new Date(timestamp).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            },
+
+            getSessionPreview: function(session) {
+                if (!session.messages) return 'No messages yet';
+                const messageKeys = Object.keys(session.messages);
+                if (messageKeys.length === 0) return 'No messages yet';
+                const lastMessageKey = messageKeys[messageKeys.length - 1];
+                const lastMessage = session.messages[lastMessageKey];
+                return lastMessage.text.length > 50 ?
+                       lastMessage.text.substring(0, 50) + '...' :
+                       lastMessage.text;
+            }
+        };
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wait for Firebase to be available
+            const checkFirebase = setInterval(() => {
+                if (window.firebaseAuth && window.firebaseDatabase) {
+                    clearInterval(checkFirebase);
+                    window.AdminCRM.init();
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>
